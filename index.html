@@ -196,6 +196,16 @@
 </div>
 
 <!--Bottom navigation bar-->
+<div id="passwordCopySetting" class="password-copy-setting">
+  <div class="password-copy-setting-row">
+    <label class="toggle-switch-small">
+      <input type="checkbox" id="passwordCopyPromptToggle">
+      <span class="slider-small"></span>
+    </label>
+    <span class="toggle-label-small">用户输入密码是否询问复制</span>
+  </div>
+</div>
+
 <div id="navBar">
   <div class="navItem active" id="navEncode">嵌入</div>
   <div class="navItem" id="navDecode">提取</div>
@@ -804,11 +814,33 @@
 </div>
 
 <!--Body script: window reformatting, button event listeners-->
+<div id="passwordCopyModal" class="password-copy-modal" style="display: none;">
+  <div class="password-copy-modal-content">
+    <div class="password-copy-modal-header">
+      <h3>密码提示</h3>
+      <button type="button" class="password-copy-modal-close" id="passwordCopyModalClose" aria-label="关闭">&times;</button>
+    </div>
+    <div class="password-copy-modal-body">
+      <p class="password-copy-modal-message">你刚刚使用了密码对图像进行加密，最好复制一下，以避免遗忘</p>
+      <div class="password-copy-row">
+        <span class="password-copy-label">密码：</span>
+        <code id="passwordCopyValue" class="password-copy-value"></code>
+        <button type="button" id="passwordCopyButton" class="cssbutton password-copy-button">复制</button>
+      </div>
+      <label class="password-copy-checkbox-row">
+        <input type="checkbox" id="passwordCopyNeverAsk" />
+        <span>以后别问我了</span>
+      </label>
+    </div>
+  </div>
+</div>
+
 <script src="lib/bodyscript.js"></script>
 
 <script>
 // Register service worker for offline support
-if ('serviceWorker' in navigator) {
+var swSupportedProtocol = /^(https?:|chrome-extension:|moz-extension:)$/i.test(window.location.protocol);
+if ('serviceWorker' in navigator && swSupportedProtocol) {
   window.addEventListener('load', function() {
     navigator.serviceWorker.register('./sw.js')
       .then(function(registration) {
@@ -819,10 +851,9 @@ if ('serviceWorker' in navigator) {
       });
   });
 } else {
-  console.log('ServiceWorker not supported');
+  console.log('ServiceWorker skipped for current environment');
 }
 </script>
 
 </body>
 </html>
-

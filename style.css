@@ -6,6 +6,10 @@ html {
 	position: relative;
 }
 
+*, *::before, *::after {
+	box-sizing: border-box;
+}
+
 /* 赛博朋克电子签名加载动画 */
 #loadingScreen {
 	position: fixed;
@@ -419,8 +423,8 @@ input,
 
 body {
 	font-family: Sans-Serif;
-	margin-left: 1%;
-	margin-right: 1%;
+	margin: 0;
+	padding: 0 5px;
 	overflow-y: auto;
 	overflow-x: hidden;
 	background-color: #0f1419;
@@ -1015,8 +1019,9 @@ opacity: 0;
 #navBar {
   position: fixed;
   top: 0;
-  left: 0;
-  width: 100%;
+  left: 5px;
+  right: 5px;
+  width: auto;
   background: linear-gradient(to bottom, #1e2732, #1a1f26);
   display: flex;
   justify-content: space-around;
@@ -1979,6 +1984,7 @@ label[for="imageFileDecode"] .cssbutton::before {
   gap: 10px;
   margin-bottom: 12px;
   flex-wrap: wrap;
+  padding: 0 5px;
 }
 
 /* 提取页面按钮行样式 */
@@ -2173,8 +2179,8 @@ label[for="imageFile"] .cssbutton::before {
 /* 载体库模式折叠栏样式 */
 #carrierLibraryPanel {
   position: fixed;
-  top: 50%;
-  right: 0;
+  top: calc(50% - 30px);
+  right: 5px;
   transform: translateY(-50%);
   z-index: 999;
   transition: all 0.3s ease;
@@ -2188,11 +2194,11 @@ label[for="imageFile"] .cssbutton::before {
 }
 
 #carrierLibraryPanel.panel-collapsed {
-  right: 0;
+  right: 5px;
 }
 
 #carrierLibraryPanel.panel-expanded {
-  right: 0;
+  right: 5px;
 }
 
 .panel-toggle {
@@ -2237,7 +2243,7 @@ label[for="imageFile"] .cssbutton::before {
 }
 
 #carrierLibraryPanel.panel-expanded .panel-toggle {
-  right: 100%;
+  right: calc(100% + 0px);
 }
 
 .panel-content {
@@ -2470,6 +2476,23 @@ input:checked + .slider:before {
   white-space: nowrap;
 }
 
+.password-copy-setting {
+  width: 100%;
+}
+
+.password-copy-setting-row {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.password-copy-setting-row .toggle-label-small {
+  white-space: normal;
+  line-height: 1.45;
+}
+
 .quality-label {
   font-size: 12px;
   color: #b0b3b8;
@@ -2520,17 +2543,17 @@ input:checked + .slider:before {
 @media (max-width: 768px) {
   #carrierLibraryPanel {
     top: auto;
-    bottom: 75px;
+    bottom: 105px;
     transform: none;
-    right: 0;
+    right: 5px;
   }
 
   #carrierLibraryPanel.panel-collapsed {
-    right: 0;
+    right: 5px;
   }
 
   #carrierLibraryPanel.panel-expanded {
-    right: 0;
+    right: 5px;
   }
 
   .panel-toggle {
@@ -3061,7 +3084,7 @@ input:checked + .slider:before {
 #fullscreenPreviewClose {
   position: absolute;
   top: -50px;
-  right: 0;
+  right: 5px;
   color: #fff;
   font-size: 40px;
   font-weight: bold;
@@ -3673,6 +3696,105 @@ input:checked + .slider:before {
 .legal-modal-body a:hover {
   color: #90caf9;
   text-decoration: underline;
+}
+
+.password-copy-modal {
+  display: none;
+  position: fixed;
+  z-index: 4100;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(7, 10, 16, 0.72);
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.password-copy-modal-content {
+  width: min(560px, 100%);
+  background: linear-gradient(180deg, #17202b 0%, #11161d 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.48);
+  overflow: hidden;
+}
+
+.password-copy-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 22px;
+  background: linear-gradient(135deg, #4e8cff 0%, #6aa9ff 100%);
+}
+
+.password-copy-modal-header h3 {
+  margin: 0;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.password-copy-modal-close {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.password-copy-modal-body {
+  padding: 22px;
+  color: #e6edf7;
+}
+
+.password-copy-modal-message {
+  margin: 0 0 18px;
+  line-height: 1.7;
+  font-size: 15px;
+}
+
+.password-copy-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.password-copy-label {
+  color: #c8d4e6;
+}
+
+.password-copy-value {
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #fff;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+.password-copy-button {
+  padding: 8px 14px;
+}
+
+.password-copy-checkbox-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #c8d4e6;
+  cursor: pointer;
+  user-select: none;
 }
 
 @media (max-width: 768px) {
