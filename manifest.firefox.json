@@ -1,0 +1,32 @@
+{
+ "name": "PassLok Image Steganography",
+ "short_name": "PassLokStego",
+ "description": "The reigning champion of image steganography",
+ "version": "1.0.4",
+ "manifest_version": 3,
+ "icons": {
+ "16": "passlok-icon16.png",
+ "48": "passlok-icon48.png",
+ "128": "passlok-icon128.png"
+ },
+ "content_security_policy": {
+  "extension_pages": "default-src 'self'; img-src 'self' data:; connect-src 'self' data:; style-src 'self'"
+ },
+ "permissions": [
+ ],
+  "background": {
+    "scripts": ["background.js"]
+  },
+ "action": {
+   "default_icon": {
+	   		"16": "passlokstego-icon16gray.png",
+           "48": "passlokstego-icon48gray.png"
+   },
+   "default_title": "PassLok Stego"
+ },
+ "browser_specific_settings": {
+  "gecko": {
+    "id": "{b8d63240-9790-42f9-89a9-302338b5c002}"
+  }
+}
+}
