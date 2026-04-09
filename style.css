@@ -787,7 +787,10 @@ opacity: 0;
 	-moz-user-select: text;
 	-ms-user-select: text;
 	user-select: text;
+<<<<<<< HEAD
 	caret-color: transparent;
+=======
+>>>>>>> 0dc18f116fc6797a73c2104eea46f8c1e6e32440
 	overflow: visible;
 	min-height: auto;
 	height: auto;
@@ -1816,6 +1819,7 @@ img {
   border-top: none;
 }
 
+<<<<<<< HEAD
 .extracted-text-highlight {
   display: inline;
   background: rgba(255, 235, 59, 0.22);
@@ -1825,6 +1829,8 @@ img {
   box-shadow: 0 0 0 1px rgba(255, 235, 59, 0.12);
 }
 
+=======
+>>>>>>> 0dc18f116fc6797a73c2104eea46f8c1e6e32440
 /* 当有图片列表时，提取页面主文本框的样式 */
 #imageListBoxDecode + #mainBoxDecode {
   margin-top: 40px;
