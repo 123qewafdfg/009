@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xml:lang="zh-CN" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>PassLok 图像隐写术</title>
+<meta name="Keywords" content="隐写术, F5, passlok, URSA, 浏览器, 加密, 解密, 对称, 公钥, 签名, AES, ECDH, Diffie, Hellman, 椭圆曲线, 高级, javascript, PGP, PRISM">
+<meta name="Description" content="PassLok 图像隐写术">
+<meta name="author" content="F. Ruiz">
+<meta name="robots" content="index">
+<meta name="viewport" content="width=device-width, minimum-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="passlok-touch-icon.png">
+<link rel="shortcut icon" type="image/x-icon" href="favicon.ico">
+
+<!--Default stylesheet containing the Light color scheme-->
+<link rel="stylesheet" href="style.css">
+
+<!--License notice and SSL force-->
+<script src="lib-extra/license.js"></script>
+
+<!--jpeg image steganography by Owen Campbell-Moore and others. https://github.com/owencm/js-steg. First jsstegencoder-1.0.js-->
+<script src="lib/jsstegencoder.js"></script>
+
+<!--jsstegdecoder-1.0.js. Edits to display warning on error or skip over certain errors-->
+<script src="lib/jsstegdecoder.js"></script>
+
+<!--jssteg-1.0.js. Also some edits for error handling-->
+<script src="lib/jssteg.js"></script>
+
+<!--seedable PRNG provided by Claude AI-->
+<script src="lib/prng.js"></script>
+
+<!--lz-string compression algorithm by Pieroxy. https://github.com/pieroxy/lz-string-->
+<script src="lib-extra/lz-string.js"></script>
+
+<!--DOMPurify, used to sanitize decrypted material before putting in DOM v3.0.1. https://github.com/cure53/DOMPurify-->
+<script src="lib-extra/purify.js"></script>
+
+<!--JSZip library for creating ZIP files-->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+<!--ORIGINAL PassLok-stego CODE, largely based on F5 by A. Westfeld 2001-->
+<script src="lib/plstego.js"></script>
+
+<!--this only loads two regular expressions: blackListExp and wordListExp, plus their lengths-->
+<script src="lib-extra/dictionary_en.js"></script>
+
+<!--code specific to this HTML document-->
+<script src="lib/main.js"></script>
+
+</head>
+
+<body>
+
+<!-- 加载动画 - 赛博朋克电子签名 -->
+<div id="loadingScreen">
+  <div class="cyber-signature-container">
+    <svg class="signature-svg" viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+      <!-- 背景网格 -->
+      <defs>
+        <linearGradient id="neonGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#00f3ff;stop-opacity:1" />
+          <stop offset="50%" style="stop-color:#b388ff;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#00f3ff;stop-opacity:1" />
+        </linearGradient>
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+          <feMerge>
+            <feMergeNode in="coloredBlur"/>
+            <feMergeNode in="coloredBlur"/>
+            <feMergeNode in="coloredBlur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+        <filter id="glowStrong">
+          <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
+          <feMerge>
+            <feMergeNode in="coloredBlur"/>
+            <feMergeNode in="coloredBlur"/>
+            <feMergeNode in="coloredBlur"/>
+            <feMergeNode in="coloredBlur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+      </defs>
+      
+      <!-- 扫描线 -->
+      <line class="scan-line" x1="0" y1="100" x2="400" y2="100" stroke="url(#neonGradient)" stroke-width="1" opacity="0.3"/>
+      
+      <!-- 粒子装饰 -->
+      <circle class="particle particle-1" cx="50" cy="50" r="2" fill="#00f3ff"/>
+      <circle class="particle particle-2" cx="350" cy="150" r="2" fill="#b388ff"/>
+      <circle class="particle particle-3" cx="200" cy="30" r="1.5" fill="#00f3ff"/>
+      <circle class="particle particle-4" cx="100" cy="170" r="1.5" fill="#b388ff"/>
+      <circle class="particle particle-5" cx="300" cy="80" r="2" fill="#00f3ff"/>
+      
+      <!-- 电子签名路径 - 科技风格 -->
+      <path class="signature-path" 
+            d="M 30 100 Q 80 60 130 90 T 230 70 Q 280 90 320 80 T 370 100" 
+            fill="none" 
+            stroke="url(#neonGradient)" 
+            stroke-width="3"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            filter="url(#glow)"/>
+      
+      <!-- 电子签名路径 2 -->
+      <path class="signature-path-2" 
+            d="M 50 120 Q 100 140 180 110 T 280 130 Q 330 120 360 130" 
+            fill="none" 
+            stroke="#b388ff" 
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            filter="url(#glow)"
+            opacity="0.7"/>
+      
+      <!-- 装饰点 -->
+      <circle class="signature-dot dot-1" cx="370" cy="100" r="4" fill="url(#neonGradient)" filter="url(#glowStrong)"/>
+      <circle class="signature-dot dot-2" cx="360" cy="130" r="3" fill="#b388ff" filter="url(#glow)"/>
+    </svg>
+    
+    <!-- 加载文字 -->
+    <div class="cyber-loading-text">
+      <span class="letter">S</span>
+      <span class="letter">Y</span>
+      <span class="letter">S</span>
+      <span class="letter">T</span>
+      <span class="letter">E</span>
+      <span class="letter">M</span>
+      <span class="letter">&nbsp;</span>
+      <span class="letter">B</span>
+      <span class="letter">O</span>
+      <span class="letter">O</span>
+      <span class="letter">T</span>
+    </div>
+    
+    <!-- 进度条 -->
+    <div class="cyber-progress">
+      <div class="progress-bar"></div>
+      <div class="progress-glow"></div>
+    </div>
+    
+    <!-- 科技装饰元素 -->
+    <div class="corner-decoration top-left"></div>
+    <div class="corner-decoration top-right"></div>
+    <div class="corner-decoration bottom-left"></div>
+    <div class="corner-decoration bottom-right"></div>
+  </div>
+</div>
+
+<!-- 载体库模式折叠栏 -->
+<div id="carrierLibraryPanel" class="panel-collapsed">
+  <div id="carrierLibraryToggle" class="panel-toggle">
+    <span class="toggle-icon">&#9776;</span>
+  </div>
+  <div class="panel-content">
+    <div class="panel-body">
+      <label class="toggle-switch">
+        <input type="checkbox" id="carrierLibraryMode">
+        <span class="slider"></span>
+      </label>
+      <span class="toggle-label">载体库模式</span>
+      <div class="panel-info-row">
+        <span class="panel-info">载密体文件为 <span id="hiddenFileSizeValue" class="panel-info-value">4.00</span>MB</span>
+      </div>
+      <div class="panel-info-row">
+        <span class="panel-info">隐藏文件占载密体比例为 <span id="hiddenFileRatioValue" class="panel-info-value">10</span>%</span>
+      </div>
+      <div class="panel-divider"></div>
+      
+      <!-- WebP转换开关 -->
+      <div class="webp-converter-container">
+        <div class="webp-converter-row">
+          <label class="toggle-switch-small">
+            <input type="checkbox" id="webpConverterToggle">
+            <span class="slider-small"></span>
+          </label>
+          <span class="toggle-label-small">转WebP格式</span>
+        </div>
+        <div class="webp-quality-row">
+          <span class="quality-label">降低</span>
+          <span id="webpQualityReduction" class="panel-info-value quality-value" title="点击可编辑">20</span>
+          <span class="quality-label">%的质量</span>
+        </div>
+      </div>
+      
+      <div class="panel-divider"></div>
+      <button class="cssbutton panel-button" id="fixCoverImageBtn" title="固定封面图">
+        固定封面图
+      </button>
+      <div class="panel-hint">长按取消选择</div>
+    </div>
+  </div>
+</div>
+
+<!--Bottom navigation bar-->
+<div id="passwordCopySetting" class="password-copy-setting">
+  <div class="password-copy-setting-row">
+    <label class="toggle-switch-small">
+      <input type="checkbox" id="passwordCopyPromptToggle">
+      <span class="slider-small"></span>
+    </label>
+    <span class="toggle-label-small">用户输入密码是否询问复制</span>
+  </div>
+</div>
+
+<div id="navBar">
+  <div class="navItem active" id="navEncode">嵌入</div>
+  <div class="navItem" id="navDecode">提取</div>
+  <div class="navItem" id="navGuide">使用流程</div>
+</div>
+
+<!--Encode screen-->
+<div id="encodeScr" class="main-screen">
+<div id="leftPanel">
+
+
+<!-- 第一行：选择方式 + 加载封面 -->
+<div class="encode-row row-1">
+  <select class="cssselect" id="encodeModeSelect" title="选择隐写方式">
+    <option value="png">LSB域隐写</option>
+    <option value="jpg">DCT域隐写</option>
+    <option value="tail">文件尾追加</option>
+  </select>
+  <label for="imageFile" id="coverImageLabel" title="打开对话框选择封面图像 (alt-L)" accesskey="l">
+    <span class="cssbutton" id="coverImageBtn">加载封面图像</span>
+  </label>
+  <input type='file' id='imageFile' accept='image/*'/>
+</div>
+
+<!-- 第二行：操作按钮 -->
+<div class="encode-row row-2">
+  <button class="cssbutton" id="startEncodeBtn" value="开始" title="开始隐写">开始</button>
+  <button class="cssbutton" id="clearBtn" value="清空" title="清空框 (alt-C)" accesskey="c">清空</button>
+  <button class="cssbutton" id="downloadBtn" value="下载" title="下载处理后的图像" disabled>下载</button>
+</div>
+
+<!-- 第三行：密码输入 -->
+<div class="encode-row row-3">
+  <div class="password-container">
+    <input type="text" class="cssbox left" id="imagePwd" title="使用密码以提高不可检测性" placeholder="可选密码"/>
+  </div>
+</div>
+  <div id="imageMsg"></div>
+  
+  <!-- 处理进度条 -->
+  <div id="progressContainer" class="task-progress" style="display: none;">
+    <div class="task-progress-meta">
+      <span id="progressText" class="task-progress-text">处理中...</span>
+      <span id="progressPercent" class="task-progress-percent">0%</span>
+    </div>
+    <div class="task-progress-track">
+      <div id="progressBar" class="task-progress-fill"></div>
+      <div class="task-progress-sheen"></div>
+    </div>
+    <div id="progressDetails" class="task-progress-details"></div>
+  </div>
+  
+  <div id="previewContainer" style="display: none;">
+    <div class="cover-image-list-item">
+      <img id="preview" src="" style="max-width: 100%;"/>
+      <span id="previewFilename" class="image-filename"></span>
+      <div id="imageDetails" class="image-details"></div>
+    </div>
+  </div>
+  <br>
+  <br>
+  <!--工具栏：仅保留图片和文件导入功能-->
+  <div id="toolBar1">
+    <div id="toolBar2">
+<label for="imgFile">
+<img class="intLink" title="插入图像" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABIAAAASCAMAAABhEH5lAAAAbFBMVEUAAAAAAAAmJibm5uaJiYnZ2dnn5+e5ubmBgYHNzc3z8/Pr6+vW1ta2trZ/f3/y8vLQ0NDPz8/Dw8OgoKCOjo54eHgcHBwGBgb+/v7T09PIyMi+vr6srKyEhIRqampiYmJbW1tPT08qKioRERGLOctyAAAAAXRSTlMAQObYZgAAAHJJREFUGNOtzkkShCAQRNFKbLsVsZ3nWe9/R8EAYeHSv6u3qEh6qo0/TkUiKULNbCglfZGSjf0vCvWZLTmxwBBXVGG1NO2D+hoIQ6IHmrKrciJDfgxIBGbPId12E//pUjOiyHydCGtFyQG3kWTcc4ro1U7vPAUU4TAxJQAAAABJRU5ErkJggg==" />
+</label>
+<input type="file" id="imgFile" accept="image/*" multiple />
+<label for="mainFile">
+<img class="intLink" title="加载文件" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABIAAAASCAMAAABhEH5lAAAATlBMVEUAAAAAAAD19fVcXFwbGxsTExP8/PzT09NxcXFaWlo4ODg1NTUEBAT5+fnw8PDr6+vU1NTIyMi+vr6Xl5dsbGxnZ2dXV1dISEghISEMDAw0f0rSAAAAAXRSTlMAQObYZgAAAFBJREFUGNO9yEkOgCAQBMBmUxDc9/9/VJ2EjgkHb9axcJuceqQRtMq4aAdWkDr6xtW5jJRFx2MBu23fdS7eG6Vz0U8VytrKmhMnVoDQlOfbBQLIAl4FF2fyAAAAAElFTkSuQmCC" />
+</label>
+<input type="file" id="mainFile" multiple />
+<img class="intLink" id="insertLinkTagBtn" title="插入链接标签" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23e4e6eb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cfilter id='b'%3E%3CfeGaussianBlur stdDeviation='0.75'/%3E%3C/filter%3E%3Cg filter='url(%23b)'%3E%3Cpath d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71'%3E%3C/path%3E%3Cpath d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'%3E%3C/path%3E%3C/g%3E%3C/svg%3E" />
+<svg class="help-square-btn" id="stegoMethodBtn" title="隐写方式说明" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+  <circle cx="12" cy="12" r="10"></circle>
+  <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+  <line x1="12" y1="17" x2="12.01" y2="17"></line>
+</svg>
+<svg class="help-square-btn" id="noticeBtn" title="注意事项" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+  <line x1="12" y1="9" x2="12" y2="13"></line>
+  <line x1="12" y1="17" x2="12.01" y2="17"></line>
+</svg>
+</div>
+  </div>
+  <div id="imageListBox" class="cssbox image-list-container" contenteditable="false"></div>
+  <div id="textBoxProgressContainer" class="task-progress task-progress-compact" style="display: none;">
+    <div class="task-progress-meta">
+      <span id="textBoxProgressText" class="task-progress-text">正在转换文件...</span>
+        <span id="textBoxProgressPercent" class="task-progress-percent">0%</span>
+    </div>
+    <div class="task-progress-track">
+        <div id="textBoxProgressBar" class="task-progress-fill"></div>
+        <div class="task-progress-sheen"></div>
+    </div>
+    <div id="textBoxProgressDetails" class="task-progress-details"></div>
+  </div>
+  <div id="mainBox" contenteditable="true" class="cssbox" placeholder="在这里输入你想隐藏的文本内容..."></div>
+  
+  <div id="wenshushuContainer">
+    <a href="https://www.wenshushu.cn/" target="_blank" rel="noopener noreferrer" class="wenshushu-btn">
+      点击跳转<span class="wenshushu-highlight">文叔叔</span>网站，你可以将隐写图像上传到这
+    </a>
+    <button type="button" id="wenshushuInfoBtn" class="wenshushu-info-btn" title="查看文叔叔说明">?</button>
+  </div>
+
+  <div id="footerInfo">
+    <div class="footer-copyright">
+      基于 <a href="https://github.com/fruiz500/PassLok-stego" target="_blank" class="github-link">
+        <svg class="github-icon" viewBox="0 0 24 24" width="16" height="16">
+          <path fill="currentColor" d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+        </svg>
+        PassLok-stego
+      </a> 修改，原版权归原作者所有，遵循 MIT License
+    </div>
+    <div class="footer-links">
+      <span class="footer-link" id="disclaimerLink">《免责声明》</span>
+      <span class="footer-link" id="userAgreementLink">《用户协议》</span>
+      <span class="footer-link" id="copyrightLink">《版权声明》</span>
+    </div>
+  </div>
+</div>
+<div id="rightPanel">
+</div>
+</div>
+
+<!--Decode screen-->
+<div id="decodeScr" class="main-screen" style="display: none;">
+<div id="leftPanel">
+
+<!-- 按钮行 -->
+<div class="decode-buttons-row">
+  <button class="cssbutton" id="decodeBtn" value="提取" title="提取图像中隐藏的内容并放入框中 (alt-R)" accesskey="r">提取</button>
+  <button class="cssbutton" id="clearBtnDecode" value="清空" title="清空框 (alt-C)" accesskey="c">清空</button>
+  <button class="cssbutton" id="downloadBtnDecode" value="下载" title="下载提取的内容" disabled>下载</button>
+</div>
+
+<!-- 第一行：加载图像 + 密码输入 -->
+<div class="encode-row row-1 decode-row-combined">
+  <label for="imageFileDecode" title="打开对话框选择要提取的图像 (alt-L)" accesskey="l">
+    <span class="cssbutton">加载图像</span>
+  </label>
+  <input type='file' id='imageFileDecode' style="display: none;" accept='image/*' multiple/>
+  <div class="password-container decode-password">
+    <input type="text" class="cssbox left" id="imagePwdDecode" title="使用密码以提高不可检测性" placeholder="可选密码"/>
+  </div>
+</div>
+  <div id="imageMsgDecode"></div>
+  <div id="imageListBoxDecode" class="cssbox image-list-container" contenteditable="false"></div>
+  <div id="mainBoxDecode" contenteditable="false" spellcheck="false" class="cssbox" placeholder="提取的内容将显示在这里。"></div>
+</div>
+<div id="rightPanel">
+</div>
+</div>
+
+<!--Guide screen-->
+<div id="guideScr" class="main-screen guide-screen" style="display: none;">
+  <div class="guide-shell">
+    <button type="button" class="guide-back-btn" id="guideBackBtn">返回工具</button>
+
+    <section class="guide-hero">
+      <div class="guide-kicker">Method Overview</div>
+      <h1 class="guide-title">图片隐写分享文件三种方案</h1>
+      <p class="guide-lead">
+        图片隐写分享文件主要包含三种实现方案，分别偏向高隐蔽轻量传递、完整文件保留，
+        以及在压缩环境下尽量降低失效风险。下面按实际使用场景整理成可直接参考的流程说明。
+      </p>
+      <div class="guide-alert">
+        <span class="guide-alert-badge">重要注意</span>
+        <strong>任何水印、裁剪、调色、滤镜、压缩、格式转换或二次修改，都会直接导致隐写内容无效。</strong>
+        <p>无论使用哪一种方案，结果图都必须按原图或原文件方式传输。只要平台发生加水印、裁剪或重编码，结果就按无效处理。</p>
+      </div>
+      <div class="guide-summary-grid">
+        <div class="guide-summary-card">
+          <span class="guide-summary-label">方案 01</span>
+          <strong>DCT 域隐写</strong>
+          <p>隐蔽性最强、难以检测，适合传递短文本、提取码和网盘外链。</p>
+        </div>
+        <div class="guide-summary-card">
+          <span class="guide-summary-label">方案 02</span>
+          <strong>文件尾追加</strong>
+          <p>流程最直接，适合不压缩原图的传输环境。</p>
+        </div>
+        <div class="guide-summary-card">
+          <span class="guide-summary-label">方案 03</span>
+          <strong>载体库模式 + 尾追加</strong>
+          <p>适合存在压缩风险的平台，重点控制单图承载比例。</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="guide-methods">
+      <article class="guide-method-card">
+        <div class="guide-method-header">
+          <span class="guide-method-index">01</span>
+          <div>
+            <h2>方案一：DCT 域隐写</h2>
+            <p>
+              DCT 域隐写适合将文本、提取码、网盘链接等轻量信息嵌入图片内部。它的重点不在容量，
+              而在于视觉变化极小、隐蔽性极强、难以被检测，同时嵌入内容体积足够小，更适合在审核严格的平台中
+              传递“访问入口”而不是直接塞入大文件。
+            </p>
+          </div>
+        </div>
+        <div class="guide-chip-row">
+          <span class="guide-chip">隐蔽性最强</span>
+          <span class="guide-chip">更难被检测</span>
+          <span class="guide-chip">适合小体积信息</span>
+        </div>
+        <div class="guide-flowchart">
+          <div class="guide-flow-step">
+            <span class="guide-flow-step-no">Step 1</span>
+            <strong>整理要传递的信息</strong>
+            <p>准备文本、链接、提取码等轻量内容。若要分享文件，可先上传到文叔叔、百度网盘等平台生成外链。</p>
+          </div>
+          <div class="guide-flow-arrow">→</div>
+          <div class="guide-flow-step">
+            <span class="guide-flow-step-no">Step 2</span>
+            <strong>选择 DCT 域隐写</strong>
+            <p>导入封面图后切换到 DCT 模式，再写入链接、提取码或说明文字等轻量信息。</p>
+          </div>
+          <div class="guide-flow-arrow">→</div>
+          <div class="guide-flow-step">
+            <span class="guide-flow-step-no">Step 3</span>
+            <strong>导出并分发图片</strong>
+            <p>生成结果图后按原图方式分发，不要加水印、裁剪或做任何二次修改。</p>
+          </div>
+          <div class="guide-flow-arrow">→</div>
+          <div class="guide-flow-step">
+            <span class="guide-flow-step-no">Step 4</span>
+            <strong>接收方提取文本</strong>
+            <p>下载原图后进入提取页，用相同密码读取内容。</p>
+          </div>
+        </div>
+        <div class="guide-scene-note">
+          适用建议：适用于审核极其严格的平台，主打资源入口、说明文字、外链和提取码的隐蔽传播。
+        </div>
+      </article>
+
+      <article class="guide-method-card">
+        <div class="guide-method-header">
+          <span class="guide-method-index">02</span>
+          <div>
+            <h2>方案二：文件尾追加隐写</h2>
+            <p>
+              文件尾追加会直接把隐藏图片附加到载体图片末尾，处理速度快、完整性高。若希望减小体积，
+              可先把待隐藏图片转换为 WebP 后再合成。
+            </p>
+          </div>
+        </div>
+        <div class="guide-chip-row">
+          <span class="guide-chip">先导入封面图</span>
+          <span class="guide-chip">可开启 WebP 压缩</span>
+          <span class="guide-chip">适合保留完整文件</span>
+          <span class="guide-chip">依赖平台不压缩原图</span>
+        </div>
+        <div class="guide-flowchart">
+          <div class="guide-flow-step">
+            <span class="guide-flow-step-no">Step 1</span>
+            <strong>先导入封面图</strong>
+            <p>先选择一张清晰、体积较大的封面图，作为隐藏内容的载体外壳。</p>
+          </div>
+          <div class="guide-flow-arrow">→</div>
+          <div class="guide-flow-step">
+            <span class="guide-flow-step-no">Step 2</span>
+            <strong>开启转 WebP 模式</strong>
+            <p>可设置降低多少百分比的质量，以牺牲部分画质为代价，换取更小的文件体积。</p>
+          </div>
+          <div class="guide-flow-arrow">→</div>
+          <div class="guide-flow-step">
+            <span class="guide-flow-step-no">Step 3</span>
+            <strong>导入隐藏图片</strong>
+            <p>使用文本框工具栏里的图片按钮，把需要隐藏的图片导入进去即可。</p>
+          </div>
+          <div class="guide-flow-arrow">→</div>
+          <div class="guide-flow-step">
+            <span class="guide-flow-step-no">Step 4</span>
+            <strong>导出合成图片</strong>
+            <p>完成后直接导出结果图，并优先在支持原图或原文件传输的平台中发送。</p>
+          </div>
+        </div>
+        <div class="guide-scene-note">
+          适用建议：适合网盘、文件中转或不会重新压缩图片的环境，重点是保证原始数据完整传递。
+        </div>
+      </article>
+
+      <article class="guide-method-card">
+        <div class="guide-method-header">
+          <span class="guide-method-index">03</span>
+          <div>
+            <h2>方案三：载体库模式 + 文件尾追加</h2>
+            <p>
+              这一方案通过多张载体图片分摊隐藏内容，并限制每张图的承载比例，以降低因平台压缩、缩放、
+              二次处理而导致整体失效的概率，对载体图质量要求也更高。
+            </p>
+          </div>
+        </div>
+        <div class="guide-chip-row">
+          <span class="guide-chip">先开启载体库</span>
+          <span class="guide-chip">导入高质量载体图</span>
+          <span class="guide-chip">可自定义占比上限</span>
+          <span class="guide-chip">对载体质量要求高</span>
+        </div>
+        <div class="guide-flowchart">
+          <div class="guide-flow-step">
+            <span class="guide-flow-step-no">Step 1</span>
+            <strong>开启载体库模式</strong>
+            <p>先打开载体库模式，让系统进入按多张载体图分摊隐藏内容的工作方式。</p>
+          </div>
+          <div class="guide-flow-arrow">→</div>
+          <div class="guide-flow-step">
+            <span class="guide-flow-step-no">Step 2</span>
+            <strong>导入高质量图片到载体库</strong>
+            <p>向载体库中导入多张画面复杂、画质清晰、体积足够大的高质量图片。</p>
+          </div>
+          <div class="guide-flow-arrow">→</div>
+          <div class="guide-flow-step">
+            <span class="guide-flow-step-no">Step 3</span>
+            <strong>设置容量和占比上限</strong>
+            <p>自定义单张载体可承载的容量和比例上限，用来规避平台压缩带来的失效风险。</p>
+          </div>
+          <div class="guide-flow-arrow">→</div>
+          <div class="guide-flow-step">
+            <span class="guide-flow-step-no">Step 4</span>
+            <strong>导入隐藏内容并批量导出</strong>
+            <p>把需要隐藏的内容写入后批量导出结果图，接收端尽量收齐全部图片后再统一提取。</p>
+          </div>
+        </div>
+        <div class="guide-scene-note">
+          适用建议：适合存在轻度审核或压缩风险的平台，但前提是载体图片质量足够高、比例控制足够保守。
+        </div>
+      </article>
+    </section>
+
+    <section class="guide-compare">
+      <div class="guide-compare-header">
+        <h2>场景侧重点</h2>
+        <p>如果不确定怎么选，可以先根据“内容类型”和“平台是否压缩原图”来判断。</p>
+      </div>
+        <div class="guide-compare-grid">
+        <div class="guide-compare-card">
+          <strong>DCT 隐写</strong>
+          <p>适用于审核极其严格的平台，主打短文本、外链、提取码等小体积信息的隐蔽传播。</p>
+        </div>
+        <div class="guide-compare-card">
+          <strong>纯文件尾追加</strong>
+          <p>更适合原图可完整保留的平台，优先保证隐藏文件本体不受损。</p>
+        </div>
+        <div class="guide-compare-card">
+          <strong>载体库模式 + 尾追加</strong>
+          <p>更适合需要兼顾传输稳定性与单图承载比例控制的环境。</p>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- 下载弹窗 -->
+<div id="downloadModal" style="display: none;">
+  <div id="downloadModalContent">
+    <div id="downloadModalHeader">
+      <span id="downloadModalClose">&times;</span>
+      <h3>下载内容</h3>
+    </div>
+    <div id="downloadModalBody">
+      <div id="fileListSection" style="display: none;">
+        <p>提取到的文件：</p>
+        <div id="extractedFileList"></div>
+        <br>
+      </div>
+      <p>请选择下载方式：</p>
+      <div id="downloadOptions">
+        <button class="cssbutton" id="downloadAllFilesBtn" style="display: none;">下载所有文件</button>
+        <button class="cssbutton" id="packageDownloadBtn">打包下载</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 载体库弹窗 -->
+<div id="carrierLibraryModal" style="display: none;">
+  <div id="carrierLibraryModalContent">
+    <div id="carrierLibraryModalHeader">
+      <span id="carrierLibraryModalClose">&times;</span>
+      <h3>载体库</h3>
+    </div>
+    <div id="carrierLibraryModalBody">
+      <div class="carrier-library-toolbar">
+        <label for="carrierLibraryFile" class="cssbutton carrier-library-import-btn">
+          <span class="btn-icon">📁</span>
+          导入图片/压缩包
+        </label>
+        <input type="file" id="carrierLibraryFile" accept="image/*,.zip,.rar,.7z" multiple />
+        <button class="cssbutton carrier-library-clear-btn" id="carrierLibraryClearBtn">
+          <span class="btn-icon">🗑️</span>
+          清空库
+        </button>
+      </div>
+      <div id="carrierLibraryLoading" class="carrier-library-loading" style="display: none;">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">正在导入...</div>
+        <div class="loading-progress" id="carrierLibraryProgress">0 / 0</div>
+      </div>
+      <div id="carrierLibraryList" class="carrier-library-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 大图预览弹窗 -->
+<div id="fullscreenPreviewModal" style="display: none;">
+  <div id="fullscreenPreviewContent">
+    <span id="fullscreenPreviewClose">&times;</span>
+    <img id="fullscreenPreviewImage" src="" alt="预览" />
+    <div id="fullscreenPreviewInfo">
+      <span id="fullscreenPreviewName"></span>
+      <span id="fullscreenPreviewSize"></span>
+    </div>
+  </div>
+</div>
+
+<!-- 数字步进器弹窗 -->
+<div id="numericStepperModal" style="display: none;">
+  <div id="numericStepperModalContent">
+    <div id="numericStepperModalHeader">
+      <span id="numericStepperModalClose">&times;</span>
+      <h3 id="numericStepperModalTitle">设置数值</h3>
+    </div>
+    <div id="numericStepperModalBody">
+      <div class="numeric-stepper-container">
+        <button class="numeric-stepper-btn" id="stepperDecreaseBtn">-</button>
+        <input type="number" id="numericStepperInput" class="numeric-stepper-input" min="1" max="10" step="1" value="4">
+        <button class="numeric-stepper-btn" id="stepperIncreaseBtn">+</button>
+      </div>
+      <div class="numeric-stepper-range">
+        <span>范围：<span id="stepperMinLabel">1</span> - <span id="stepperMaxLabel">10</span></span>
+        <span id="stepperUnitLabel">MB</span>
+      </div>
+      <div class="numeric-stepper-buttons">
+        <button class="cssbutton" id="numericStepperCancelBtn">取消</button>
+        <button class="cssbutton" id="numericStepperConfirmBtn">确定</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 插入链接标签弹窗 -->
+<div id="linkTagModal" style="display: none;">
+  <div id="linkTagModalContent">
+    <div id="linkTagModalHeader">
+      <h3>插入链接</h3>
+      <span id="linkTagModalClose">&times;</span>
+    </div>
+    <div id="linkTagModalBody">
+      <input type="text" id="linkTagInput" class="cssbox" placeholder="请输入链接地址..." />
+      <div class="link-tag-buttons">
+        <button class="cssbutton" id="linkTagCancelBtn">取消</button>
+        <button class="cssbutton" id="linkTagConfirmBtn">确定</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 免责声明弹窗 -->
+<div id="disclaimerModal" class="legal-modal" style="display: none;">
+  <div class="legal-modal-content">
+    <div class="legal-modal-header">
+      <h3>免责声明</h3>
+      <span class="legal-modal-close">&times;</span>
+    </div>
+    <div class="legal-modal-body">
+      <p>本网站（以下简称"本站"）系基于开源项目PassLok-stego（GitHub地址：<a href="https://github.com/fruiz500/PassLok-stego" target="_blank">https://github.com/fruiz500/PassLok-stego</a>）修改搭建，提供图片隐写相关工具服务，特作如下免责声明，用户使用本站服务即视为已阅读、理解并同意本声明全部条款：</p>
+      <ol>
+        <li><strong>合法用途限制</strong>：本站提供的图片隐写工具，仅用于合法、正当的学习、研究及个人隐私保护用途，严禁用于任何违法犯罪活动（包括但不限于传播色情、暴力、恐怖主义、分裂言论、虚假信息，传输盗版内容、涉密信息、非法数据，规避监管、非法通信等）。</li>
+        <li><strong>无担保声明</strong>：本站工具按"原样"提供，不提供任何明示或暗示的担保，包括但不限于功能的稳定性、安全性、无错误性，以及工具适用于特定用途的适用性、不侵权性。</li>
+        <li><strong>风险自负</strong>：使用者应自行对使用本站工具的行为及后果负责，承担因使用本站服务产生的全部风险与法律责任，包括但不限于：上传内容的合法性、版权合规性、隐私保护合规性；隐写内容的安全性、保密性及可能被第三方检测、提取的风险；因使用本站工具导致的数据丢失、信息泄露、侵权追责、财产损失等全部相关损失。</li>
+        <li><strong>责任限制</strong>：本站运营方不对任何因使用本站服务产生的直接、间接、附带或衍生损害承担责任，包括但不限于利润损失、业务中断、数据灭失、名誉受损等。</li>
+        <li><strong>服务变更</strong>：本站运营方有权根据实际情况，随时修改、暂停、关停服务，或拒绝向违规用户提供服务，无需提前通知用户，且不承担任何因此产生的责任。</li>
+        <li><strong>违规处理</strong>：若用户使用本站服务违反相关法律法规或本声明，本站有权立即终止服务，并配合相关监管部门调查，由此产生的一切法律责任由用户自行承担。</li>
+      </ol>
+    </div>
+  </div>
+</div>
+
+<!-- 文叔叔说明弹窗 -->
+<div id="wenshushuModal" class="legal-modal" style="display: none;">
+  <div class="legal-modal-content">
+    <div class="legal-modal-header wenshushu-header">
+      <h3>文叔叔说明</h3>
+      <span class="legal-modal-close">&times;</span>
+    </div>
+    <div class="legal-modal-body">
+      <p>文叔叔是免费临时文件传输网站，不限速、免登录上传下载，单文件最大 5GB，支持文件夹上传，可通过取件码、链接分享文件，自带文件收集功能，适合临时传大文件、临时资源，免费版存储有效期 1-3 天，传输稳定，操作简单，适合短期快速文件中转。</p>
+      <p>（当然这不是广告，只是推荐一个网站而已）</p>
+    </div>
+  </div>
+</div>
+
+<!-- 用户协议弹窗 -->
+<div id="userAgreementModal" class="legal-modal" style="display: none;">
+  <div class="legal-modal-content">
+    <div class="legal-modal-header">
+      <h3>用户协议</h3>
+      <span class="legal-modal-close">&times;</span>
+    </div>
+    <div class="legal-modal-body">
+      <p>欢迎使用本站提供的图片隐写工具服务（以下简称"本服务"），本协议是用户与本站运营方之间关于使用本服务的权利义务约定，用户使用本服务即视为接受本协议全部条款，若不同意请立即停止使用。</p>
+      <ol>
+        <li><strong>用户资格</strong>：仅限年满18周岁、具有完全民事行为能力的自然人使用本服务；未满18周岁的用户不得使用本服务，若擅自使用，由此产生的一切后果由其监护人承担。</li>
+        <li><strong>使用规范</strong>：
+          <ul>
+            <li>（1）用户承诺，仅将本服务用于合法、正当的学习、研究及个人隐私保护，严禁用于任何违法犯罪活动，不得利用本服务传输、隐藏任何违规、违法、侵权或涉密内容。</li>
+            <li>（2）用户保证，上传至本站的图片及隐藏的内容，均拥有合法的版权、使用权或授权，不侵犯任何第三方的肖像权、著作权、隐私权、商业秘密等合法权益；若因上传内容侵权导致第三方追责，全部责任由用户自行承担，与本站运营方无关。</li>
+            <li>（3）用户不得利用本服务从事任何危害网络安全、扰乱网络秩序的行为，不得对本站工具进行反向工程、破解、篡改、衍生开发，不得利用本站工具侵犯他人合法权益或规避监管。</li>
+          </ul>
+        </li>
+        <li><strong>数据处理</strong>：
+          <ul>
+            <li>（1）本站仅在内存中临时处理用户上传的图片及隐写内容，不永久存储任何用户上传的文件、隐写文本或相关数据，用户下载处理结果后，本站将立即自动清理所有临时数据，不留存任何痕迹。</li>
+            <li>（2）本站不收集、不记录、不泄露用户的IP地址、使用记录、个人信息及隐写内容，不向任何第三方分享用户相关数据（法律法规要求除外）。</li>
+          </ul>
+        </li>
+        <li><strong>服务变更与终止</strong>：
+          <ul>
+            <li>（1）本站运营方有权根据技术升级、监管要求等情况，修改、优化本服务的功能、规则，无需提前通知用户。</li>
+            <li>（2）若用户违反本协议约定，本站运营方有权立即终止向该用户提供服务，拉黑相关IP，删除违规内容，并保留配合监管部门调查的权利，由此产生的损失由用户自行承担。</li>
+            <li>（3）本站运营方有权根据自身情况，随时暂停、关停本服务，无需向用户承担任何赔偿责任。</li>
+          </ul>
+        </li>
+        <li><strong>争议解决</strong>：本协议未尽事宜，适用中华人民共和国相关法律法规；若用户与本站运营方就本协议产生争议，应协商解决，协商不成的，提交本站运营方所在地有管辖权的人民法院诉讼解决。</li>
+      </ol>
+    </div>
+  </div>
+</div>
+
+<!-- 版权声明弹窗 -->
+<div id="copyrightModal" class="legal-modal" style="display: none;">
+  <div class="legal-modal-content">
+    <div class="legal-modal-header">
+      <h3>版权声明</h3>
+      <span class="legal-modal-close">&times;</span>
+    </div>
+    <div class="legal-modal-body">
+      <ol>
+        <li>本站图片隐写工具基于开源项目PassLok-stego（GitHub地址：<a href="https://github.com/fruiz500/PassLok-stego" target="_blank">https://github.com/fruiz500/PassLok-stego</a>）修改搭建，该开源项目遵循MIT License协议，本站严格遵守该协议相关约定，保留原项目的全部版权声明，原项目版权归其原作者所有。</li>
+        <li>本站对原开源项目的修改部分（包括但不限于代码优化、界面调整、功能补充等），版权归本站运营方所有，未经本站运营方书面授权，任何单位或个人不得擅自复制、篡改、传播、使用该部分内容。</li>
+        <li>本站使用的图标、素材、字体等内容，均已获得合法授权或属于公开可使用资源，若涉及第三方版权，本站已标注相关来源，若有侵权，请及时联系本站运营方，我们将第一时间处理。</li>
+        <li>任何单位或个人未经本站运营方及原开源项目作者授权，不得擅自将本站工具、代码及相关内容用于商业用途，不得篡改、移除本站及原项目的版权声明。</li>
+        <li>用户上传至本站的图片及隐写内容，版权归用户或相关授权方所有，本站仅提供临时处理服务，不享有任何相关版权权益；若用户上传内容侵犯第三方版权，由用户自行承担全部责任。</li>
+      </ol>
+    </div>
+  </div>
+</div>
+
+<!-- 隐写方式说明弹窗 -->
+<div id="stegoMethodModal" class="legal-modal" style="display: none;">
+  <div class="legal-modal-content">
+    <div class="legal-modal-header stego-method-header">
+      <h3>隐写方式说明</h3>
+      <span class="legal-modal-close">&times;</span>
+    </div>
+    <div class="legal-modal-body">
+      <div class="stego-method-section">
+        <h4 class="stego-method-title">LSB 隐写</h4>
+        <p>支持导入任意文件并自动转换为 PNG 格式，设置加密参数后将内容嵌入图像，导出为 PNG 文件；提取时直接导入文件即可解析。</p>
+        <p>特点：嵌入容量大，不破坏原始图像视觉效果；产出的文件体积相对较大，操作简便</p>
+      </div>
+      <div class="stego-method-section">
+        <h4 class="stego-method-title">DCT 隐写</h4>
+        <p>适合嵌入文本、提取码、网盘外链等轻量内容，重点在于隐蔽性强、难以检测，且嵌入信息体积较小。</p>
+        <p>不建议嵌入大文件，大文件导入易失败且处理速度极慢，更适合传递“访问入口”而不是文件本体。</p>
+        <p>兼容性提示：iOS 浏览器及对应型号手机可能存在无法解析、导出后无法正常识别的问题。</p>
+        <p>特点：安全性高，隐蔽性好；嵌入容量较小，适合对安全性有较高要求的场景</p>
+      </div>
+      <div class="stego-method-section">
+        <h4 class="stego-method-title">文件尾追加隐写</h4>
+        <p>将待隐藏内容直接追加至载体文件末尾，提取时可一键分离隐藏内容与原文件。</p>
+        <p>特点：无容量限制，处理速度最快，操作最简单；安全性较低，隐藏内容易被检测发现</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 注意事项弹窗 -->
+<div id="noticeModal" class="legal-modal" style="display: none;">
+  <div class="legal-modal-content">
+    <div class="legal-modal-header notice-header">
+      <h3>注意事项</h3>
+      <span class="legal-modal-close">&times;</span>
+    </div>
+    <div class="legal-modal-body">
+      <ul class="notice-list">
+        <li class="notice-list-item-critical"><strong>高风险提示：</strong>任何平台水印、裁剪、调色、滤镜、压缩、格式转换或二次修改，都会直接破坏隐写数据，结果绝对无效，无法正常提取</li>
+        <li>若平台不支持上传原图功能，隐写信息将直接丢失，所有隐写操作失效</li>
+        <li>提取隐写内容时，必须下载原图，否则无法正常解析隐藏数据</li>
+        <li>提取和转发时优先使用“原图发送”或“原文件发送”，不要截图、转存或重新导出</li>
+        <li>图片在平台发布、转发过程中，若体积过大极易被系统自动压缩，造成隐写信息损坏</li>
+        <li>封面载体图优先选择大小约 4MB、画质清晰、纹理复杂度高的图片，可降低被平台压缩的概率</li>
+        <li>需隐藏的文件体积建议不超过封面图体积的30%，体积比例过高易被平台识别为异常数据</li>
+        <li>尽量选择色彩丰富、细节密集的风景、实拍类图片作为载体，纯色、低像素图片容错率低，更易丢失信息</li>
+        <li>避免对隐写后的图片进行二次编辑，如裁剪、调色、滤镜、格式转换等，任何像素修改都可能导致隐藏内容损坏</li>
+        <li>跨平台传输时优先使用支持原图传输的渠道，如聊天软件的 "发送原图"，避免经过多层转发压缩</li>
+        <li>隐写完成后建议自行验证：发送→下载原图→提取信息，确保内容完整可读后再正式使用</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!--Body script: window reformatting, button event listeners-->
+<div id="passwordCopyModal" class="password-copy-modal" style="display: none;">
+  <div class="password-copy-modal-content">
+    <div class="password-copy-modal-header">
+      <h3>密码提示</h3>
+      <button type="button" class="password-copy-modal-close" id="passwordCopyModalClose" aria-label="关闭">&times;</button>
+    </div>
+    <div class="password-copy-modal-body">
+      <p class="password-copy-modal-message">你刚刚使用了密码对图像进行加密，最好复制一下，以避免遗忘</p>
+      <div class="password-copy-row">
+        <span class="password-copy-label">密码：</span>
+        <code id="passwordCopyValue" class="password-copy-value"></code>
+        <button type="button" id="passwordCopyButton" class="cssbutton password-copy-button">复制</button>
+      </div>
+      <label class="password-copy-checkbox-row">
+        <input type="checkbox" id="passwordCopyNeverAsk" />
+        <span>以后别问我了</span>
+      </label>
+    </div>
+  </div>
+</div>
+
+<script src="lib/bodyscript.js"></script>
+
+<script>
+// Register service worker for offline support
+var swSupportedProtocol = /^(https?:|chrome-extension:|moz-extension:)$/i.test(window.location.protocol);
+if ('serviceWorker' in navigator && swSupportedProtocol) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('./sw.js')
+      .then(function(registration) {
+        console.log('ServiceWorker registered:', registration.scope);
+      })
+      .catch(function(error) {
+        console.log('ServiceWorker registration failed:', error);
+      });
+  });
+} else {
+  console.log('ServiceWorker skipped for current environment');
+}
+</script>
+
+</body>
+</html>
