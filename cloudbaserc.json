@@ -1,0 +1,12 @@
+{
+  "version": "2.0",
+  "envId": "k12-sdfsf-5g757tm551b1d50b",
+  "app": {
+    "serviceName": "yinxie",
+    "framework": "static",
+    "installCommand": "",
+    "buildCommand": "",
+    "outputDir": ".",
+    "deployPath": "/yinxie"
+  }
+}

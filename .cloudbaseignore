@@ -1,0 +1,8 @@
+README.md
+cloudbaserc.json
+deploy-tencent.ps1
+deploy-tencent.sh
+.git
+.git/**
+node_modules
+node_modules/**
