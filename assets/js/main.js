@@ -3574,7 +3574,6 @@ function checkLargeFileTailStego(imageElement, password, callback) {
                     var offset = payloadStart;
                     var resultHtml = '';
                     extractedFiles = [];
-                    pendingExtractedBlobFiles = [];
                     for (var i = 0; i < metadata.files.length; i++) {
                         var file = metadata.files[i];
                         var fileStart = offset;
